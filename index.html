@@ -1470,7 +1470,7 @@ body.dropping .drop-overlay{display:flex}
     const setLbl = t => { if (lbl) lbl.textContent = t; };
     state.busy = true; refreshLocks();
     try { await fn(setLbl); }
-    catch (e) { console.error(e); toast(MSG.fail, 'error'); }
+    catch (e) { console.error(e); toast(MSG.fail + (e && e.message ? ' (' + String(e.message).slice(0, 90) + ')' : ''), 'error'); }
     finally { if (lbl) lbl.textContent = old; state.busy = false; refreshLocks(); }
   }
 
@@ -1821,7 +1821,10 @@ body.dropping .drop-overlay{display:flex}
       slide.addImage({ data: it.dataUrl, x, y, w, h });
       await sleep(0);
     }
-    const blob = await pptx.write({ outputType: 'blob' });
+    let raw = null;
+    try { raw = await pptx.write({ outputType: 'blob' }); } catch (e) { console.warn(e); }
+    if (!raw) raw = await pptx.write('blob');
+    const blob = raw instanceof Blob ? raw : new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
     const r = await saveFile('presentasi.pptx', blob);
     if (r === 'saved') toast('PPTX berhasil dibuat dan diunduh.');
   }
