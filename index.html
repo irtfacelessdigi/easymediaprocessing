@@ -244,6 +244,7 @@ body.dropping .drop-overlay{display:flex}
 }
 .chip:hover:not(:disabled){border-color:var(--primary);color:var(--accent-text)}
 .chip:disabled{opacity:.45;cursor:not-allowed}
+.chip[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .privacy{margin-top:16px;color:var(--muted);font-size:13px}
 
 /* Gabung PDF */
@@ -592,9 +593,9 @@ body.dropping .drop-overlay{display:flex}
     <section class="card" id="bgCard" data-tone="teal">
       <div class="sec-head">
         <h2>Hapus Background</h2>
-        <p class="muted">Alat mandiri, terpisah dari gambar potongan di atas.</p>
+        <p class="muted">Bisa untuk gambar sendiri atau hasil potongan di atas.</p>
       </div>
-      <p class="hint-line" style="margin-bottom:12px">Upload gambar sendiri, atau pakai gambar yang sedang dipotong. Ambil warna latar (klik langsung di gambar atau tombol sudut), atur toleransi, lalu terapkan.</p>
+      <p class="hint-line" style="margin-bottom:12px">Upload gambar sendiri, atau pakai hasil potongan (1 potongan atau semuanya sekaligus). Ambil warna latar (klik langsung di gambar atau tombol sudut), atur toleransi, lalu terapkan.</p>
 
       <div class="bg-body">
         <div class="bg-canvas-wrap">
@@ -609,7 +610,11 @@ body.dropping .drop-overlay{display:flex}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             Upload Gambar
           </label>
-          <button id="btnBgFromSlice" class="btn tonal" type="button" disabled>Pakai Gambar yang Dipotong</button>
+          <button id="btnBgFromSlice" class="btn tonal" type="button" disabled>Pakai Hasil Potongan</button>
+          <div id="bgSliceBox" hidden>
+            <p class="hint-line" style="margin:0 0 8px">Pilih 1 potongan, atau semuanya sekaligus:</p>
+            <div id="bgChips" class="chips"></div>
+          </div>
 
           <div class="bg-row">
             <input id="bgColor" class="bg-swatch" type="color" value="#ffffff" aria-label="Warna latar yang ingin dihapus">
@@ -634,36 +639,6 @@ body.dropping .drop-overlay{display:flex}
       <input id="bgFile" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" tabindex="-1" aria-hidden="true">
     </section>
 
-    <section class="card" id="pptCard" data-tone="amber">
-      <h2>Convert ke PPT</h2>
-      <p class="muted" style="margin-top:2px">Ubah gambar atau PDF jadi slide PowerPoint (.pptx). Satu gambar atau satu halaman PDF jadi satu slide, sesuai urutan di daftar.</p>
-      <div class="merge-actions">
-        <label id="btnAddPptImg" class="btn secondary" for="pptImgFile" role="button" tabindex="0">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          Tambah Gambar
-        </label>
-        <label id="btnAddPptPdf" class="btn secondary" for="pptPdfFile" role="button" tabindex="0">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          <span class="lbl">Tambah PDF</span>
-        </label>
-        <button id="btnAddPptSlices" class="btn tonal" type="button" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          <span class="lbl">Tambah hasil potongan</span>
-        </button>
-      </div>
-      <ul id="pptList" class="pdf-list"></ul>
-      <p id="pptEmpty" class="muted empty-note" style="margin-top:14px">Belum ada gambar atau PDF. Tambahkan minimal 1 file untuk dibuat PPTX.</p>
-      <p id="pptSummary" class="muted" hidden></p>
-      <div class="merge-foot">
-        <button id="btnBuildPpt" class="btn primary" type="button" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
-          <span class="lbl">Buat PPTX</span>
-        </button>
-        <button id="btnClearPpt" class="link" type="button" hidden>Kosongkan daftar</button>
-      </div>
-      <input id="pptImgFile" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" multiple tabindex="-1" aria-hidden="true">
-      <input id="pptPdfFile" class="visually-hidden" type="file" accept="application/pdf,.pdf" multiple tabindex="-1" aria-hidden="true">
-    </section>
   </main>
 </div>
 
@@ -673,7 +648,6 @@ body.dropping .drop-overlay{display:flex}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PptxGenJS/3.11.0/pptxgen.min.js"></script>
 <script>
 (() => {
   'use strict';
@@ -733,10 +707,8 @@ body.dropping .drop-overlay{display:flex}
     bgFile: $('#bgFile'), bgFileBtn: $('#btnBgFile'),
     bgStage: $('#bgStage'), bgPic: $('#bgPic'), bgEmpty: $('#bgEmpty'),
     bgFromSlice: $('#btnBgFromSlice'), bgDownload: $('#btnBgDownload'),
-    pptList: $('#pptList'), pptEmpty: $('#pptEmpty'), pptSummary: $('#pptSummary'),
-    addPptImg: $('#btnAddPptImg'), pptImgFile: $('#pptImgFile'), addPptSlices: $('#btnAddPptSlices'),
-    buildPpt: $('#btnBuildPpt'), clearPpt: $('#btnClearPpt'),
-    addPptx: $('#btnAddPptx'), pdfPptFile: $('#pdfPptFile'), addPptPdf: $('#btnAddPptPdf'), pptPdfFile: $('#pptPdfFile')
+    addPptx: $('#btnAddPptx'), pdfPptFile: $('#pdfPptFile'),
+    bgSliceBox: $('#bgSliceBox'), bgChips: $('#bgChips')
   };
 
   /* ---------- Toast ---------- */
@@ -1090,59 +1062,125 @@ body.dropping .drop-overlay{display:flex}
     const { src, w, h } = dec;
     if (!w || !h) { closeSrc(src); toast(MSG.type, 'error'); return; }
     if (w * h > MAX_PIXELS) { closeSrc(src); toast(MSG.big, 'error'); return; }
+    bgSet = null; el.bgSliceBox.hidden = true; bgSyncUI();
     bgLoadDecoded(src, w, h, file.name);
   }
 
-  function bgFromSliceSource() {
-    if (!state.orig) return;
-    const c = document.createElement('canvas');
-    c.width = state.w; c.height = state.h;
-    c.getContext('2d').drawImage(state.orig, 0, 0, state.w, state.h);
-    bgLoadDecoded(c, state.w, state.h, state.name);
+  let bgSet = null; // { items: [{name, orig, img, w, h, done}], sel: number | 'all' }
+
+  function bgSyncUI() {
+    const all = !!bgSet && bgSet.sel === 'all';
+    el.bgDownload.querySelector('.lbl').textContent = all ? 'Download Semua (ZIP)' : 'Download PNG';
+    el.bgApply.querySelector('.lbl').textContent = all ? 'Hapus Background Semua' : 'Hapus Background';
+    el.bgHint.textContent = all
+      ? 'Background semua potongan sudah dihapus. Klik unduh untuk menyimpan semuanya dalam 1 ZIP.'
+      : 'Background sudah dihapus. Klik unduh untuk menyimpan sebagai PNG.';
+    el.bgChips.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(!!bgSet && String(bgSet.sel) === b.dataset.v)));
   }
 
-  async function applyBgRemoval(setLbl) {
-    if (!bgState.orig) return;
-    setLbl('Memproses…');
-    const w = bgState.w, h = bgState.h;
+  function bgChip(v, text, label) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.dataset.v = v; b.textContent = text;
+    b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', 'false');
+    el.bgChips.appendChild(b);
+  }
+
+  function bgSelect(sel) {
+    bgSet.sel = sel;
+    const it = bgSet.items[sel === 'all' ? 0 : sel];
+    bgLoadDecoded(it.orig, it.w, it.h, it.name);
+    if (it.done) {
+      bgState.img = it.img; bgState.bgRemoved = true; bgRepaint(it.img);
+      el.bgReset.hidden = false; el.bgHint.hidden = false;
+    }
+    bgSyncUI();
+  }
+
+  function bgUseSlices() {
+    if (!state.img) return;
+    const items = computeSlices().map(s => {
+      const c = document.createElement('canvas');
+      c.width = s.w; c.height = s.h;
+      c.getContext('2d').drawImage(state.img, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+      return { name: 'potongan-' + (s.i + 1), orig: c, img: c, w: s.w, h: s.h, done: false };
+    });
+    bgSet = { items, sel: 0 };
+    el.bgChips.textContent = '';
+    items.forEach((_, i) => bgChip(String(i), String(i + 1), 'Potongan ' + (i + 1)));
+    if (items.length > 1) bgChip('all', 'Semua (' + items.length + ')', 'Semua potongan sekaligus');
+    el.bgSliceBox.hidden = false;
+    bgSelect(0);
+  }
+
+  el.bgChips.addEventListener('click', e => {
+    const b = e.target.closest('.chip');
+    if (!b || !bgSet) return;
+    bgSelect(b.dataset.v === 'all' ? 'all' : Number(b.dataset.v));
+  });
+
+  function bgRemoveFrom(src, w, h) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
-    const ctx = c.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(bgState.orig, 0, 0, w, h);
-    await sleep(0);
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const d = imgData.data;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(src, 0, 0, w, h);
+    const im = cx.getImageData(0, 0, w, h), d = im.data;
     const [br, bg, bb] = hexToRgb(el.bgColor.value);
     const tol = clamp(parseInt(el.bgTol.value, 10) || 30, 1, 100);
-    const maxDist = 441.7; // sqrt(3 * 255^2)
-    const hardT = (tol / 100) * maxDist;
-    const featherT = Math.max(6, hardT * 0.35);
+    const hardT = (tol / 100) * 441.7, featherT = Math.max(6, hardT * 0.35);
     for (let i = 0; i < d.length; i += 4) {
       const dr = d[i] - br, dg = d[i + 1] - bg, db = d[i + 2] - bb;
       const dist = Math.sqrt(dr * dr + dg * dg + db * db);
       if (dist <= hardT) d[i + 3] = 0;
       else if (dist <= hardT + featherT) d[i + 3] = Math.round(d[i + 3] * (dist - hardT) / featherT);
     }
-    ctx.putImageData(imgData, 0, 0);
-    await sleep(0);
-    setLbl('Menyiapkan pratinjau…');
+    cx.putImageData(im, 0, 0);
+    return c;
+  }
 
-    if (bgState.img && bgState.img !== bgState.orig) closeSrc(bgState.img);
-    bgState.img = c;
+  async function applyBgRemoval(setLbl) {
+    if (!bgState.orig) return;
+    const many = !!bgSet && bgSet.sel === 'all';
+    const targets = bgSet ? (many ? bgSet.items : [bgSet.items[bgSet.sel]]) : [null];
+    let shown = null;
+    for (let i = 0; i < targets.length; i++) {
+      setLbl(many ? 'Memproses ' + (i + 1) + '/' + targets.length : 'Memproses…');
+      await sleep(0);
+      const it = targets[i];
+      const c = it ? bgRemoveFrom(it.orig, it.w, it.h) : bgRemoveFrom(bgState.orig, bgState.w, bgState.h);
+      if (it) { it.img = c; it.done = true; }
+      if (i === 0) shown = c;
+    }
+    bgState.img = shown;
     bgState.bgRemoved = true;
-    bgRepaint(c);
+    bgRepaint(shown);
     el.bgReset.hidden = false;
     el.bgHint.hidden = false;
-    toast('Background dihapus. Geser toleransi lalu terapkan lagi kalau hasilnya kurang pas.');
+    bgSyncUI();
+    toast(many ? 'Background semua potongan dihapus. Pratinjau menampilkan potongan 1.' : 'Background dihapus. Geser toleransi lalu terapkan lagi kalau hasilnya kurang pas.');
   }
 
   async function bgDownloadResult() {
     if (!bgState.img) return;
+    const toBlob = c => new Promise(res => c.toBlob(res, 'image/png'));
+    if (bgSet && bgSet.sel === 'all') {
+      if (!window.JSZip) { toast(MSG.fail, 'error'); return; }
+      const zip = new window.JSZip();
+      for (const it of bgSet.items) {
+        const b = await toBlob(it.img);
+        if (!b) { toast(MSG.fail, 'error'); return; }
+        zip.file(it.name + (it.done ? '-nobg' : '') + '.png', b);
+        await sleep(0);
+      }
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+      const r = await saveFile('potongan-tanpa-bg.zip', blob);
+      if (r === 'saved') toast(bgSet.items.length + ' gambar tersimpan dalam 1 ZIP.');
+      return;
+    }
     const w = bgState.w, h = bgState.h;
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     c.getContext('2d').drawImage(bgState.img, 0, 0, w, h);
-    const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+    const blob = await toBlob(c);
     if (!blob) { toast(MSG.fail, 'error'); return; }
     const base = String(bgState.name || 'gambar').replace(/\.[^.]+$/, '');
     const r = await saveFile(base + '-nobg.png', blob);
@@ -1268,7 +1306,7 @@ body.dropping .drop-overlay{display:flex}
     if (f) await bgLoadFile(f);
     el.bgFile.value = '';
   });
-  el.bgFromSlice.addEventListener('click', bgFromSliceSource);
+  el.bgFromSlice.addEventListener('click', bgUseSlices);
   el.bgPick.addEventListener('click', () => { el.bgColor.value = rgbToHex(cornerColorOf(bgState.prev)); });
   el.bgPic.addEventListener('click', e => {
     if (!bgState.prev) return;
@@ -1283,7 +1321,7 @@ body.dropping .drop-overlay{display:flex}
   el.bgApply.addEventListener('click', () => runExport(el.bgApply, applyBgRemoval, true));
   el.bgReset.addEventListener('click', () => {
     if (!bgState.bgRemoved || !bgState.orig) return;
-    if (bgState.img !== bgState.orig) closeSrc(bgState.img);
+    if (bgSet) (bgSet.sel === 'all' ? bgSet.items : [bgSet.items[bgSet.sel]]).forEach(it => { it.img = it.orig; it.done = false; });
     bgState.img = bgState.orig;
     bgState.bgRemoved = false;
     bgRepaint(bgState.orig);
@@ -1682,7 +1720,6 @@ body.dropping .drop-overlay{display:flex}
     el.clearPdf.disabled = state.busy;
     el.fbSlices.disabled = state.busy || !state.img;
     el.fbList.disabled = state.busy || pdfItems.length < 1;
-    refreshPptLocks();
   }
 
   el.pdfList.addEventListener('click', e => {
@@ -1699,137 +1736,6 @@ body.dropping .drop-overlay{display:flex}
   });
 
   el.clearPdf.addEventListener('click', () => { pdfItems = []; renderPdfList(); });
-
-  /* ---------- Convert ke PPT ---------- */
-  let pptItems = [], pptSeq = 0;
-
-  function pptAddCanvas(name, canvas, w, h, jpg) {
-    pptItems.push({ id: ++pptSeq, name, dataUrl: jpg ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png'), w, h });
-  }
-
-  async function addPptImageFiles(files) {
-    const list = Array.from(files).filter(isImg);
-    if (!list.length) { toast(MSG.type, 'error'); return; }
-    let ok = 0, bad = 0;
-    for (const f of list) {
-      if (f.size > MAX_FILE) { bad++; continue; }
-      let src;
-      try {
-        ({ src } = await decodeFile(f));
-        const w = src.width || src.naturalWidth, h = src.height || src.naturalHeight;
-        if (!w || !h || w * h > MAX_PIXELS) { bad++; continue; }
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(src, 0, 0, w, h);
-        pptAddCanvas(f.name, c, w, h);
-        ok++;
-      } catch (e) { console.error(e); bad++; }
-      finally { closeSrc(src); }
-      await sleep(0);
-    }
-    renderPptList();
-    if (bad) toast('Beberapa gambar gagal diproses atau terlalu besar.', 'error');
-    if (ok) toast(ok + ' gambar ditambahkan ke daftar PPT.');
-  }
-
-  function addPptFromSlices() {
-    if (!state.img) return;
-    const slices = computeSlices();
-    if (!slices.length) return;
-    slices.forEach((s, i) => {
-      const c = document.createElement('canvas');
-      c.width = s.w; c.height = s.h;
-      c.getContext('2d').drawImage(state.img, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
-      pptAddCanvas('potongan-' + (i + 1), c, s.w, s.h);
-    });
-    renderPptList();
-    toast(slices.length + ' hasil potongan ditambahkan ke daftar PPT.');
-  }
-
-  function renderPptList() {
-    el.pptList.textContent = '';
-    pptItems.forEach((it, i) => {
-      const li = document.createElement('li');
-      li.className = 'pdf-item';
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      const nm = document.createElement('div');
-      nm.className = 'name'; nm.textContent = (i + 1) + '. ' + it.name; nm.title = it.name;
-      const inf = document.createElement('div');
-      inf.className = 'info'; inf.textContent = it.w + ' × ' + it.h + ' px';
-      meta.append(nm, inf);
-      li.append(meta,
-        iconBtn('up', i, i === 0, it.name),
-        iconBtn('down', i, i === pptItems.length - 1, it.name),
-        iconBtn('del', i, false, it.name));
-      el.pptList.appendChild(li);
-    });
-    el.pptEmpty.hidden = pptItems.length > 0;
-    el.pptSummary.hidden = pptItems.length === 0;
-    el.pptSummary.textContent = 'Total ' + pptItems.length + ' slide.';
-    el.clearPpt.hidden = pptItems.length === 0;
-    refreshPptLocks();
-  }
-
-  function refreshPptLocks() {
-    el.buildPpt.disabled = state.busy || pptItems.length < 1;
-    el.addPptSlices.disabled = state.busy || !state.img;
-    el.clearPpt.disabled = state.busy;
-  }
-
-  el.pptList.addEventListener('click', e => {
-    const b = e.target.closest('.icon-btn');
-    if (!b || state.busy) return;
-    const i = Number(b.dataset.i), act = b.dataset.act;
-    if (act === 'del') pptItems.splice(i, 1);
-    else {
-      const j = act === 'up' ? i - 1 : i + 1;
-      if (j < 0 || j >= pptItems.length) return;
-      [pptItems[i], pptItems[j]] = [pptItems[j], pptItems[i]];
-    }
-    renderPptList();
-  });
-
-  el.clearPpt.addEventListener('click', () => { pptItems = []; renderPptList(); });
-
-  el.addPptImg.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.pptImgFile.click(); }
-  });
-  el.pptImgFile.addEventListener('change', async () => {
-    const fs = el.pptImgFile.files;
-    if (fs && fs.length) await addPptImageFiles(fs);
-    el.pptImgFile.value = '';
-  });
-  el.addPptSlices.addEventListener('click', addPptFromSlices);
-
-  async function buildPptx(setLbl) {
-    if (!window.PptxGenJS) throw new Error('lib');
-    if (!pptItems.length) return;
-    const pptx = new window.PptxGenJS();
-    pptx.defineLayout({ name: 'EMP_16x9', width: 13.333, height: 7.5 });
-    pptx.layout = 'EMP_16x9';
-    const boxW = 13.333, boxH = 7.5;
-    for (let i = 0; i < pptItems.length; i++) {
-      setLbl('Menyusun slide ' + (i + 1) + '/' + pptItems.length);
-      const it = pptItems[i];
-      const slide = pptx.addSlide();
-      slide.background = { color: 'FFFFFF' };
-      const ratio = it.w / it.h;
-      let w = boxW, h = boxW / ratio;
-      if (h > boxH) { h = boxH; w = boxH * ratio; }
-      const x = (boxW - w) / 2, y = (boxH - h) / 2;
-      slide.addImage({ data: it.dataUrl, x, y, w, h });
-      await sleep(0);
-    }
-    let raw = null;
-    try { raw = await pptx.write({ outputType: 'blob' }); } catch (e) { console.warn(e); }
-    if (!raw) raw = await pptx.write('blob');
-    const blob = raw instanceof Blob ? raw : new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
-    const r = await saveFile('presentasi.pptx', blob);
-    if (r === 'saved') toast('PPTX berhasil dibuat dan diunduh.');
-  }
-
-  el.buildPpt.addEventListener('click', () => runExport(el.buildPpt, buildPptx, true));
 
   /* ---------- PPTX → PDF (dirender di browser, tanpa server) ---------- */
   const isPptx = f => /\.pptx$/i.test(f.name);
@@ -2160,53 +2066,6 @@ body.dropping .drop-overlay{display:flex}
     if (fs.length) await runExport(el.addPptx, s => addPptxFiles(fs, s), true);
     else if (el.pdfPptFile.files && el.pdfPptFile.files.length) toast('Silakan pilih file PPT berformat .pptx.', 'error');
     el.pdfPptFile.value = '';
-  });
-
-  /* ---------- PDF → slide PPT ---------- */
-  async function addPptPdfFiles(files, setLbl) {
-    let lib;
-    try { lib = await loadPdfJs(); }
-    catch (e) { console.error(e); toast('Pustaka PDF gagal dimuat. Cek koneksi internet lalu coba lagi.', 'error'); return; }
-    let ok = 0, bad = 0, why = '';
-    for (const f of files) {
-      let pdf;
-      try {
-        pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()), isEvalSupported: false, useWorkerFetch: false }).promise;
-        if (pdf.numPages > 150) { bad++; why = 'lebih dari 150 halaman'; continue; }
-        const base = f.name.replace(/\.pdf$/i, '');
-        for (let i = 1; i <= pdf.numPages; i++) {
-          setLbl('Halaman ' + i + '/' + pdf.numPages);
-          const page = await pdf.getPage(i), v0 = page.getViewport({ scale: 1 });
-          const vp = page.getViewport({ scale: Math.min(2.5, 1800 / Math.max(v0.width, v0.height)) });
-          const c = document.createElement('canvas');
-          c.width = Math.max(1, Math.floor(vp.width)); c.height = Math.max(1, Math.floor(vp.height));
-          const cx = c.getContext('2d');
-          cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
-          await page.render({ canvasContext: cx, viewport: vp }).promise;
-          pptAddCanvas(base + ' (hal. ' + i + ')', c, c.width, c.height, true);
-          c.width = c.height = 0;
-          await sleep(0);
-        }
-        ok++;
-      } catch (e) {
-        console.error(e); bad++;
-        why = e && e.name === 'PasswordException' ? 'PDF terkunci password' : String((e && e.message) || e).slice(0, 90);
-      }
-      finally { if (pdf) { try { pdf.destroy(); } catch (_) {} } }
-    }
-    renderPptList();
-    if (bad) toast('PDF gagal diproses: ' + why, 'error');
-    if (ok) toast(ok + ' PDF ditambahkan, tiap halaman jadi 1 slide.');
-  }
-
-  el.addPptPdf.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.pptPdfFile.click(); }
-  });
-  el.pptPdfFile.addEventListener('change', async () => {
-    const fs = Array.from(el.pptPdfFile.files || []).filter(isPdf);
-    if (fs.length) await runExport(el.addPptPdf, s => addPptPdfFiles(fs, s), true);
-    else if (el.pptPdfFile.files && el.pptPdfFile.files.length) toast(MSG.pdfType, 'error');
-    el.pptPdfFile.value = '';
   });
 
   el.addPdf.addEventListener('keydown', e => {
