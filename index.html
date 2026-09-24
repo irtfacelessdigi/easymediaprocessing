@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>EMP — Easy Media Processing</title>
+<title>EMP 8/26 — Easy Media Processing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -57,6 +57,7 @@ button,input,select{font:inherit;color:inherit}
 .brand h1{font-size:clamp(23px,4.2vw,30px);font-weight:800;letter-spacing:-.025em;line-height:1.15}
 .brand h1 .brand-sub{font-size:.42em;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:2px}
 .brand p{color:var(--muted);font-size:14px;margin-top:2px}
+.brand-by{display:inline-block;color:var(--accent-text);margin-left:6px}
 
 main{display:grid;gap:16px}
 .workspace{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
@@ -210,6 +211,11 @@ body.dropping .drop-overlay{display:flex}
 }
 .bg-stage canvas{display:block;max-width:100%;max-height:420px;height:auto}
 .bg-controls{display:grid;gap:10px;align-content:start}
+.bg-grid{display:grid;gap:8px;width:100%}
+.bg-tile{position:relative;padding:0;border:0;border-radius:10px;overflow:hidden;cursor:pointer;outline:3px solid transparent;outline-offset:2px;
+  background:conic-gradient(var(--chk-a) 25%,var(--chk-b) 0 50%,var(--chk-a) 0 75%,var(--chk-b) 0) 0 0/12px 12px;transition:outline-color .15s}
+.bg-tile canvas{display:block;width:100%;height:auto}
+.bg-tile.sel{outline-color:var(--primary)}
 .check{display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer;font-weight:700}
 .check input{width:22px;height:22px;accent-color:var(--primary);flex:none;cursor:pointer}
 .check small{display:block;font-weight:500;color:var(--muted);font-size:12.5px;line-height:1.35}
@@ -332,8 +338,8 @@ body.dropping .drop-overlay{display:flex}
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1>EMP <span class="brand-sub">(Easy Media Processing)</span></h1>
-      <p>Potong gambar, jadikan PDF, dan buka sebagai flipbook. Tanpa ribet.</p>
+      <h1>EMP 8/26 <span class="brand-sub">(Easy Media Processing)</span> <span class="brand-sub brand-by">by @irtfacelessdigiiiii</span></h1>
+      <p>Potong gambar, hapus background, jadikan PDF, dan buka sebagai flipbook. Tanpa ribet. Ada fitur baru? Update aplikasinya gratis, kok.</p>
     </div>
     <label id="btnChange" class="btn secondary" for="file" role="button" tabindex="0" hidden>Ganti Gambar</label>
   </header>
@@ -602,6 +608,7 @@ body.dropping .drop-overlay{display:flex}
           <div id="bgStage" class="stage bg-stage" hidden>
             <canvas id="bgPic" role="img" aria-label="Pratinjau gambar. Klik di gambar untuk mengambil warna latar pada titik itu."></canvas>
           </div>
+          <div id="bgGrid" class="bg-grid" hidden></div>
           <div id="bgEmpty" class="muted empty-note" style="width:100%">Belum ada gambar. Upload gambar atau pakai hasil potongan.</div>
         </div>
 
@@ -612,7 +619,7 @@ body.dropping .drop-overlay{display:flex}
           </label>
           <button id="btnBgFromSlice" class="btn tonal" type="button" disabled>Pakai Hasil Potongan</button>
           <div id="bgSliceBox" hidden>
-            <p class="hint-line" style="margin:0 0 8px">Pilih 1 potongan, atau semuanya sekaligus:</p>
+            <p class="hint-line" style="margin:0 0 8px">Ketuk potongan di pratinjau, atau pilih Semua untuk sekaligus:</p>
             <div id="bgChips" class="chips"></div>
           </div>
 
@@ -620,13 +627,15 @@ body.dropping .drop-overlay{display:flex}
             <input id="bgColor" class="bg-swatch" type="color" value="#ffffff" aria-label="Warna latar yang ingin dihapus">
             <button id="btnBgPick" class="btn tonal" type="button" disabled>Ambil dari Sudut Gambar</button>
           </div>
-          <label class="field">
+          <div class="stepper-row">
             <span>Toleransi</span>
-            <span class="input-suffix">
-              <input id="bgTol" type="range" min="1" max="100" value="30" aria-label="Toleransi hapus background">
-              <output id="bgTolVal">30</output>
-            </span>
-          </label>
+            <div class="stepper">
+              <button id="bgTolMinus" type="button" aria-label="Kurangi toleransi">−</button>
+              <output id="bgTolVal" aria-live="polite">30</output>
+              <button id="bgTolPlus" type="button" aria-label="Tambah toleransi">+</button>
+            </div>
+          </div>
+          <input id="bgTol" type="hidden" value="30">
           <div class="bg-actions">
             <button id="btnBgApply" class="btn primary" type="button" disabled><span class="lbl">Hapus Background</span></button>
             <button id="btnBgReset" class="btn secondary" type="button" hidden>Kembalikan Asli</button>
@@ -708,7 +717,7 @@ body.dropping .drop-overlay{display:flex}
     bgStage: $('#bgStage'), bgPic: $('#bgPic'), bgEmpty: $('#bgEmpty'),
     bgFromSlice: $('#btnBgFromSlice'), bgDownload: $('#btnBgDownload'),
     addPptx: $('#btnAddPptx'), pdfPptFile: $('#pdfPptFile'),
-    bgSliceBox: $('#bgSliceBox'), bgChips: $('#bgChips')
+    bgSliceBox: $('#bgSliceBox'), bgChips: $('#bgChips'), bgGrid: $('#bgGrid'), bgTolMinus: $('#bgTolMinus'), bgTolPlus: $('#bgTolPlus')
   };
 
   /* ---------- Toast ---------- */
@@ -1062,7 +1071,7 @@ body.dropping .drop-overlay{display:flex}
     const { src, w, h } = dec;
     if (!w || !h) { closeSrc(src); toast(MSG.type, 'error'); return; }
     if (w * h > MAX_PIXELS) { closeSrc(src); toast(MSG.big, 'error'); return; }
-    bgSet = null; el.bgSliceBox.hidden = true; bgSyncUI();
+    bgSet = null; el.bgSliceBox.hidden = true; el.bgGrid.hidden = true; bgSyncUI();
     bgLoadDecoded(src, w, h, file.name);
   }
 
@@ -1093,8 +1102,45 @@ body.dropping .drop-overlay{display:flex}
       bgState.img = it.img; bgState.bgRemoved = true; bgRepaint(it.img);
       el.bgReset.hidden = false; el.bgHint.hidden = false;
     }
+    el.bgStage.hidden = true;
+    bgRenderGrid();
     bgSyncUI();
   }
+
+  function bgRenderGrid() {
+    if (!bgSet) { el.bgGrid.hidden = true; return; }
+    const n = bgSet.items.length, cols = Math.max(1, Math.min(bgSet.cols, n));
+    if (el.bgGrid.children.length !== n) {
+      el.bgGrid.textContent = '';
+      bgSet.items.forEach((_, i) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'bg-tile'; b.dataset.i = i;
+        b.setAttribute('aria-label', 'Pilih potongan ' + (i + 1));
+        const cv = document.createElement('canvas'), nn = document.createElement('span');
+        nn.className = 'tile-n'; nn.textContent = i + 1;
+        b.append(cv, nn);
+        el.bgGrid.appendChild(b);
+      });
+    }
+    el.bgGrid.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+    el.bgGrid.style.maxWidth = (cols * 260) + 'px';
+    bgSet.items.forEach((it, i) => {
+      const b = el.bgGrid.children[i], cv = b.firstChild;
+      const k = Math.min(1, 320 / Math.max(it.w, it.h));
+      cv.width = Math.max(1, Math.round(it.w * k)); cv.height = Math.max(1, Math.round(it.h * k));
+      const cx = cv.getContext('2d');
+      cx.clearRect(0, 0, cv.width, cv.height);
+      cx.imageSmoothingQuality = 'high';
+      cx.drawImage(it.img, 0, 0, cv.width, cv.height);
+      b.classList.toggle('sel', bgSet.sel === 'all' || bgSet.sel === i);
+    });
+    el.bgGrid.hidden = false;
+  }
+
+  el.bgGrid.addEventListener('click', e => {
+    const b = e.target.closest('.bg-tile');
+    if (b && bgSet) bgSelect(Number(b.dataset.i));
+  });
 
   function bgUseSlices() {
     if (!state.img) return;
@@ -1104,7 +1150,7 @@ body.dropping .drop-overlay{display:flex}
       c.getContext('2d').drawImage(state.img, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
       return { name: 'potongan-' + (s.i + 1), orig: c, img: c, w: s.w, h: s.h, done: false };
     });
-    bgSet = { items, sel: 0 };
+    bgSet = { items, sel: 0, cols: state.cols };
     el.bgChips.textContent = '';
     items.forEach((_, i) => bgChip(String(i), String(i + 1), 'Potongan ' + (i + 1)));
     if (items.length > 1) bgChip('all', 'Semua (' + items.length + ')', 'Semua potongan sekaligus');
@@ -1155,8 +1201,9 @@ body.dropping .drop-overlay{display:flex}
     bgRepaint(shown);
     el.bgReset.hidden = false;
     el.bgHint.hidden = false;
+    bgRenderGrid();
     bgSyncUI();
-    toast(many ? 'Background semua potongan dihapus. Pratinjau menampilkan potongan 1.' : 'Background dihapus. Geser toleransi lalu terapkan lagi kalau hasilnya kurang pas.');
+    toast(many ? 'Background semua potongan dihapus.' : 'Background dihapus. Ubah toleransi dengan tombol + atau − lalu terapkan lagi kalau hasilnya kurang pas.');
   }
 
   async function bgDownloadResult() {
@@ -1297,7 +1344,14 @@ body.dropping .drop-overlay{display:flex}
   el.keep.addEventListener('change', () => { state.keep = el.keep.checked; });
   el.fmt.addEventListener('change', () => { state.fmt = el.fmt.value; });
 
-  el.bgTol.addEventListener('input', () => { el.bgTolVal.textContent = el.bgTol.value; });
+  const bgTolSet = v => {
+    v = clamp(v, 5, 100);
+    el.bgTol.value = v; el.bgTolVal.textContent = v;
+    el.bgTolMinus.disabled = v <= 5; el.bgTolPlus.disabled = v >= 100;
+  };
+  el.bgTolMinus.addEventListener('click', () => bgTolSet(+el.bgTol.value - 5));
+  el.bgTolPlus.addEventListener('click', () => bgTolSet(+el.bgTol.value + 5));
+  bgTolSet(30);
   el.bgFileBtn.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.bgFile.click(); }
   });
@@ -1325,6 +1379,7 @@ body.dropping .drop-overlay{display:flex}
     bgState.img = bgState.orig;
     bgState.bgRemoved = false;
     bgRepaint(bgState.orig);
+    bgRenderGrid();
     el.bgReset.hidden = true;
     el.bgHint.hidden = true;
     toast('Gambar asli dikembalikan.');
