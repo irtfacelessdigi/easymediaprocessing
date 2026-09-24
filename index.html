@@ -2161,13 +2161,15 @@ body.dropping .drop-overlay{display:flex}
 
   /* ---------- PDF → slide PPT ---------- */
   async function addPptPdfFiles(files, setLbl) {
-    const lib = await loadPdfJs();
-    let ok = 0, bad = 0;
+    let lib;
+    try { lib = await loadPdfJs(); }
+    catch (e) { console.error(e); toast('Pustaka PDF gagal dimuat. Cek koneksi internet lalu coba lagi.', 'error'); return; }
+    let ok = 0, bad = 0, why = '';
     for (const f of files) {
       let pdf;
       try {
-        pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
-        if (pdf.numPages > 150) { bad++; continue; }
+        pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()), isEvalSupported: false, useWorkerFetch: false }).promise;
+        if (pdf.numPages > 150) { bad++; why = 'lebih dari 150 halaman'; continue; }
         const base = f.name.replace(/\.pdf$/i, '');
         for (let i = 1; i <= pdf.numPages; i++) {
           setLbl('Halaman ' + i + '/' + pdf.numPages);
@@ -2183,11 +2185,14 @@ body.dropping .drop-overlay{display:flex}
           await sleep(0);
         }
         ok++;
-      } catch (e) { console.error(e); bad++; }
+      } catch (e) {
+        console.error(e); bad++;
+        why = e && e.name === 'PasswordException' ? 'PDF terkunci password' : String((e && e.message) || e).slice(0, 90);
+      }
       finally { if (pdf) { try { pdf.destroy(); } catch (_) {} } }
     }
     renderPptList();
-    if (bad) toast('Ada PDF yang gagal dibaca (terkunci password atau lebih dari 150 halaman).', 'error');
+    if (bad) toast('PDF gagal diproses: ' + why, 'error');
     if (ok) toast(ok + ' PDF ditambahkan, tiap halaman jadi 1 slide.');
   }
 
